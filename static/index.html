@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1a1a2e; color: #eee; min-height: 100vh;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        .toolbar {
+            position: fixed; top: 0; left: 0; right: 0; height: 56px;
+            background: #16213e; display: flex; align-items: center;
+            padding: 0 16px; gap: 8px; z-index: 100;
+            border-bottom: 1px solid #0f3460; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .toolbar h1 { font-size: 17px; font-weight: 600; }
+
+        .container {
+            margin-top: 76px; width: 100%; max-width: 600px; padding: 0 20px;
+            display: flex; flex-direction: column; gap: 20px;
+        }
+
+        .card {
+            background: #16213e; border-radius: 12px; padding: 24px;
+            border: 1px solid #0f3460;
+        }
+        .card h2 { font-size: 15px; margin-bottom: 16px; color: #aaa; font-weight: 500; }
+
+        .input-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+        .input-group label { font-size: 13px; color: #888; }
+        .input-group input[type="text"],
+        .input-group input[type="number"],
+        .input-group select {
+            background: #0f1a30; color: #eee; border: 1px solid #2a3a50;
+            border-radius: 6px; padding: 10px 12px; font-size: 14px;
+            outline: none; width: 100%;
+        }
+        .input-group input:focus, .input-group select:focus {
+            border-color: #4a8adf;
+        }
+
+        .row { display: flex; gap: 12px; }
+        .row .input-group { flex: 1; }
+
+        .color-row { display: flex; gap: 12px; align-items: end; }
+        .color-group { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+        .color-group label { font-size: 13px; color: #888; }
+        .color-group input[type="color"] {
+            width: 100%; height: 40px; border: 1px solid #2a3a50;
+            border-radius: 6px; padding: 2px; cursor: pointer; background: #0f1a30;
+        }
+
+        .btn {
+            padding: 12px 24px; border: none; border-radius: 8px;
+            cursor: pointer; font-size: 14px; font-weight: 600;
+            transition: background 0.2s; width: 100%;
+        }
+        .btn-primary { background: #e94560; color: white; }
+        .btn-primary:hover { background: #c73650; }
+        .btn-secondary { background: #0f3460; color: #eee; }
+        .btn-secondary:hover { background: #1a4a7a; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .preview-area {
+            display: flex; flex-direction: column; align-items: center; gap: 16px;
+        }
+        .preview-area img {
+            max-width: 100%; border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .preview-placeholder {
+            width: 250px; height: 250px; background: #0f1a30;
+            border: 2px dashed #2a3a50; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            color: #555; font-size: 14px;
+        }
+
+        .download-row { display: flex; gap: 8px; }
+        .download-row .btn { flex: 1; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <h1>QR Code Generator</h1>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Link / Text</h2>
+            <div class="input-group">
+                <input type="text" id="link-input" placeholder="https://example.com" autofocus>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Style</h2>
+            <div class="row">
+                <div class="input-group">
+                    <label>Module Style</label>
+                    <select id="style-select">
+                        <option value="square">Square</option>
+                        <option value="rounded">Rounded</option>
+                        <option value="circle">Circle</option>
+                        <option value="gapped">Gapped Square</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Error Correction</label>
+                    <select id="ec-select">
+                        <option value="L">Low (7%)</option>
+                        <option value="M" selected>Medium (15%)</option>
+                        <option value="Q">Quartile (25%)</option>
+                        <option value="H">High (30%)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="input-group">
+                    <label>Size (px per module)</label>
+                    <input type="number" id="size-input" value="10" min="4" max="40">
+                </div>
+            </div>
+            <div class="color-row">
+                <div class="color-group">
+                    <label>Foreground</label>
+                    <input type="color" id="fg-color" value="#000000">
+                </div>
+                <div class="color-group">
+                    <label>Background</label>
+                    <input type="color" id="bg-color" value="#ffffff">
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" id="gen-btn" onclick="generate()">Generate QR Code</button>
+
+        <div class="card">
+            <div class="preview-area">
+                <div class="preview-placeholder" id="placeholder">QR code will appear here</div>
+                <img id="qr-img" style="display:none">
+                <div class="download-row" id="download-row" style="display:none">
+                    <button class="btn btn-secondary" onclick="downloadQR('png')">Download PNG</button>
+                    <button class="btn btn-secondary" onclick="downloadQR('svg')">Download SVG</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentImageB64 = null;
+
+        const linkInput = document.getElementById('link-input');
+        linkInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') generate();
+        });
+
+        async function generate() {
+            const link = linkInput.value.trim();
+            if (!link) { linkInput.focus(); return; }
+
+            const btn = document.getElementById('gen-btn');
+            btn.disabled = true; btn.textContent = 'Generating...';
+
+            try {
+                const res = await fetch('/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        link,
+                        style: document.getElementById('style-select').value,
+                        ec: document.getElementById('ec-select').value,
+                        size: parseInt(document.getElementById('size-input').value) || 10,
+                        fg: document.getElementById('fg-color').value,
+                        bg: document.getElementById('bg-color').value,
+                    }),
+                });
+                const data = await res.json();
+                if (data.error) { alert(data.error); return; }
+
+                currentImageB64 = data.image;
+                const img = document.getElementById('qr-img');
+                img.src = 'data:image/png;base64,' + data.image;
+                img.style.display = 'block';
+                document.getElementById('placeholder').style.display = 'none';
+                document.getElementById('download-row').style.display = 'flex';
+            } catch (err) {
+                alert('Failed: ' + err.message);
+            } finally {
+                btn.disabled = false; btn.textContent = 'Generate QR Code';
+            }
+        }
+
+        function downloadQR(format) {
+            if (!currentImageB64) return;
+
+            if (format === 'png') {
+                const a = document.createElement('a');
+                a.href = 'data:image/png;base64,' + currentImageB64;
+                a.download = 'qrcode.png';
+                a.click();
+            } else if (format === 'svg') {
+                // Convert to SVG client-side from the PNG for simplicity
+                const img = document.getElementById('qr-img');
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+
+                // For a proper SVG, embed the image
+                const svgData = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="${img.naturalWidth}" height="${img.naturalHeight}">
+  <image width="${img.naturalWidth}" height="${img.naturalHeight}"
+         href="data:image/png;base64,${currentImageB64}"/>
+</svg>`;
+                const blob = new Blob([svgData], { type: 'image/svg+xml' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'qrcode.svg';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            }
+        }
+    </script>
+</body>
+</html>
